@@ -54,4 +54,61 @@ def extract_video_id(url):
     else:
         return None
         
+def get_transcript(url):
+    """
+    Purpose:
+        Fetch the transcript from a YouTube video.
 
+    Parameters:
+        url (str): Complete YouTube URL.
+
+    Returns:
+        str: Complete transcript as a single string.
+    """
+
+    # Extract the Video ID from the YouTube URL.
+    # Example:
+    # https://www.youtube.com/watch?v=abcd1234
+    # becomes
+    # abcd1234
+    video_id = extract_video_id(url)
+    
+    # Print the extracted Video ID (for debugging).
+    print(f"Video ID: {video_id}")
+
+    # Check whether a valid Video ID was extracted.
+    # If not, stop the program and show an error.
+    if not video_id:
+        raise ValueError("Invalid YouTube URL.")
+    
+    # Try to fetch the transcript from YouTube.
+    # If any error occurs (for example, transcript not available),
+    # the except block will handle it.
+    try:
+        
+        # Fetch the transcript from YouTube using the Video ID.
+        # The API returns the transcript as a list of dictionaries.
+        transcript = YouTubeTranscriptApi.get_transcript(video_id)
+        
+        # Extract only the spoken text from each transcript entry.
+        # Each entry is a dictionary containing:
+        # text, start time and duration.
+        transcript_text = " ".join(
+            entry["text"] for entry in transcript
+        )
+        
+        #Return the complete transcript as one string
+        return transcript_text
+    
+    #Catch any exception raised while fetching the trancript.
+    except Exception as e:
+        
+        #Raise a new exception while a meaningful error message.
+        raise Exception(f"Error fetching transcript: {e}")
+
+            
+        
+            
+        
+
+        
