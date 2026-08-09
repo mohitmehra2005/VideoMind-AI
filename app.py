@@ -15,7 +15,14 @@ st.session_state.page, not separate multipage files):
 
 Run with: streamlit run videomind_app.py
 """
-# from backend.transcript import get_transcript
+from backend.transcript import get_transcript
+from backend.chunking import split_documents
+from backend.embeddings import get_embeddings_model
+from backend.vector_store import create_vector_store
+from langchain_core.documents import Document
+from backend.retriever import create_retriever
+from backend.llm import get_llm
+from backend.prompts import prompt
 import time
 import random
 from datetime import datetime
@@ -389,15 +396,41 @@ def render_landing():
 
         if analyze:
             if url.strip():
-                # Call the backend function and send the YouTube URL.
-                # For now, this function only prints the URL.
-                # Later, it will extract the transcript from the video.
-                get_transcript(url)
+                transcript_text = get_transcript(url)
                 
-                start_analysis(title="Newly analyzed video", channel="Unknown channel", duration="--:--", emoji="🎞️")
-            else:
-                st.warning("Paste a YouTube URL first.")
+                print("TRANSCRIPT PREVIEW:")
+                print(transcript_text[:500])
 
+                document = Document(page_content=transcript_text)
+
+                chunks = split_documents([document])
+
+                print("Number of chunks:", len(chunks))
+
+                embedding_model = get_embeddings_model()
+
+                vector_store = create_vector_store(
+                chunks,
+                embedding_model
+                )
+                
+                retriever = create_retriever(vector_store)
+                
+                st.session_state["retriever"] = retriever
+                
+                test_results = retriever.invoke("What is this video about?")
+
+                print("RETRIEVER TEST:")
+                for result in test_results:
+                    print(result.page_content[:300])
+                    print("---")
+
+                start_analysis(
+                    title="Newly analyzed video",
+                    channel="Unknown channel",
+                    duration="--:--",
+                    emoji="🎞️"
+                )
     st.markdown("<div style='height:34px'></div>", unsafe_allow_html=True)
     st.markdown('<div class="eyebrow" style="text-align:center;">Or try an example</div>', unsafe_allow_html=True)
     st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
@@ -561,17 +594,55 @@ def render_dashboard():
         if question:
             st.session_state.chat_history.append({"role": "user", "content": question})
             st.session_state.history.append(question)
-            # ---- Placeholder AI response (replace with real RAG call) ----
-            dummy_answer = (
-                "Based on the transcript, the speaker addresses this directly — the short version is "
-                "that the approach trades a bit of accuracy for a large gain in speed, which is why it's "
-                "become the default in most practical setups."
-            )
-            with st.spinner("Thinking…"):
-                time.sleep(0.6)
-            st.session_state.chat_history.append({"role": "assistant", "content": dummy_answer})
-            st.rerun()
+            # ---- Real RAG question answering ----
 
+        # Check whether a retriever has been created for the analyzed video.
+        if "retriever" not in st.session_state:
+            st.warning("Please analyze a YouTube video first.")
+        else:
+
+           with st.spinner("Thinking..."):
+
+                # Get the retriever belonging to the current video.
+                retriever = st.session_state["retriever"]
+
+                # Search the video for the 3 most relevant chunks.
+                relevant_documents = retriever.invoke(question)
+
+                # Combine the retrieved chunks into one context string.
+                context = "\n\n".join(
+                    document.page_content
+                    for document in relevant_documents
+                )
+
+                # Get the Gemini model.
+                llm = get_llm()
+
+                # Create the prompt using the retrieved video context
+                # and the user's question.
+                messages = prompt.format_messages(
+                    context=context,
+                    questions=question
+                )
+
+                # Send the prompt to Gemini.
+                response = llm.invoke(messages)
+
+                # Get Gemini's actual answer.
+                answer = response.content
+
+        # Save the real answer in chat history.
+        st.session_state.chat_history.append(
+            {
+                "role": "assistant",
+                "content": answer
+            }
+        )
+
+        # Refresh the page so the answer appears.
+        st.rerun()
+           
+           
     # --- Transcript tab ---
     with tab_transcript:
         st.markdown('<div class="eyebrow">Full transcript</div>', unsafe_allow_html=True)
