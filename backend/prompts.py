@@ -1,21 +1,14 @@
-# Import ChatPromptTemplate from LangChain.
-# It allows us to create a reusable prompt template.
-from lagnchain_core.prompts import ChatPTromptTemplete
-
-# Create the prompt templete for our RAG syatem.
-prompt = ChatPromptTemplete.from_templete(
-    """
-    Answer the user's questions based only on the provided context.
-    
-    If the answer cannot be found in the context, say that you
-    don't know the answer based on the provided information
-    
+# Create a rompt using the user's questions and retrieved context
+def create_prompt(question, context):
+    prompt = f"""
+    You are a helpful AI assistant
+    Answer the user's question using the provided context.
     Context:
     {context}
-    
-    Question;
-    {questions}
-    
+    Question:
+    {question}
+    If the answer is not present in the context, say that
+    you don't have enough information from the provided context
     Answer:
     """
-)
+    return prompt

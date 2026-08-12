@@ -1,28 +1,13 @@
-# Import Chroma from LangChain.
-# Chroma will store our document embeddings.
-from langchain_chroma import Chroma
+from langchain_community.vectorstores import FAISS
 
-def create_vector_store(chunks, embedding_model):
-    """
-    Create a Chroma vector store from document chunks.
-    
-    Parameters:
-    chunks (list): List of document chunks.
-    embedding_model: Embedding model used to create vectors.
-    
-    Returns:
-    Chroma: The created vector store.
+# Create a vector store from our transcript chunks
+def create_vector_store(chunks, embeddings):
 
-    """
-    
-    # Create the Chroma vector store.
-    # Chroma will use the embedding model to convert
-    # our document chunks into vectors.
-    vector_store = Chroma.from_documents(
-        documents = chunks,
-        embedding = embedding_model,
-        collection_name = "videomind"
+    #Convert the chunks into vectors
+    #and dtores them inside FAISS
+    vector_store = FAISS.from_documents(
+        chunks,
+        embeddings
     )
-    
-    # Return the vector store.
+
     return vector_store

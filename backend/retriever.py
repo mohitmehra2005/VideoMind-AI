@@ -1,11 +1,10 @@
-# Create a retriever from our vector store.
+# Create a retriever from our vector store
 def create_retriever(vector_store):
-    
-    # Convert the vector store into a retriever.
-    # k=3 means the retriever will return the 3 most relevant chunks.
+
+    # The retriever will search the vector store
+    # and return the 4 most relevant chunks
     retriever = vector_store.as_retriever(
-        search_kwargs = {"k": 3}
+        search_kwargs = {"k":4}
     )
-    
-    # Return the retriever.
+
     return retriever

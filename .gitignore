@@ -1,4 +1,18 @@
-.venv/
-__pycache__/
-*.pyc
+
+# Environment variables / API keys
 .env
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Virtual environment
+.venv/
+venv/
+
+# VS Code
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db

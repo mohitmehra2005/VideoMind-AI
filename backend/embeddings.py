@@ -1,19 +1,17 @@
-# Import Hugging Face embeddings from langchain.
-from langchain_huggingface import HuggingFaceEmbeddings
+import os
 
-def get_embeddings_model():
-    """
-    Creste and return the embedding model.
-    
-    Returns:
-    HuggingFaceEmbeddings: The embedding model.
+from dotenv import load_dotenv
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
-    """
-    
-    # Create the Hugging Face embedding model.
-    embedding_model = HuggingFaceEmbeddings(
-        model_name = "sentence-transformers/all-MiniLM-L6-v2"
+# Load variables from the .env file
+load_dotenv()
+
+# Create the Gemini embedding model
+def create_embeddings():
+
+    embeddings = GoogleGenerativeAIEmbeddings(
+        model = "gemini-embedding-2",
+        google_api_key = os.getenv("GEMINI_API_KEY")
     )
-    
-    # Return the embedding model.
-    return embedding_model
+
+    return embeddings

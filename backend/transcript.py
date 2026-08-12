@@ -2,50 +2,68 @@ from urllib.parse import urlparse, parse_qs
 from youtube_transcript_api import YouTubeTranscriptApi
 
 
-# Extract the Video ID from a YouTube URL
+# Extract the YouTube video ID from the URL
 def extract_video_id(url):
+
+    # Break the URL into different parts
     parsed_url = urlparse(url)
 
-    # Normal YouTube URL
+    # Example:
+    # https://www.youtube.com/watch?v=abc123
     if parsed_url.hostname in ["www.youtube.com", "youtube.com"]:
-        query_parameters = parse_qs(parsed_url.query)
 
-        if "v" in query_parameters:
-            return query_parameters["v"][0]
+        # Get the values from the URL query
+        # In this case, we want the "v" value
+        query = parse_qs(parsed_url.query)
+
+        # If "v" exists, return its value
+        if "v" in query:
+            return query["v"][0]
 
     # Short YouTube URL
     elif parsed_url.hostname == "youtu.be":
+
+        # The video ID is after /
         return parsed_url.path.lstrip("/")
 
+    # If the URL isn't recognised
     return None
 
 
-# Fetch the English transcript
+# Get transcript from YouTube
 def get_transcript(url):
+
+    # First, get the video ID
     video_id = extract_video_id(url)
 
+    # Stop if we couldn't find a video ID
     if not video_id:
         raise ValueError("Invalid YouTube URL.")
 
     try:
-        # Create YouTube Transcript API client
+
+        # Create the YouTube Transcript API object
         ytt_api = YouTubeTranscriptApi()
 
-        # Fetch English transcript
+        # Fetch the English transcript
         transcript = ytt_api.fetch(
             video_id,
             languages=["en"]
         )
 
-        # Combine all transcript snippets into one text
+        # Combine all transcript snippets
+        # into one large string
         transcript_text = " ".join(
             snippet.text
             for snippet in transcript
         )
 
+        # Return the complete transcript
         return transcript_text
 
     except Exception as e:
+
+        # Show a clear error if something goes wrong
         raise Exception(
-            f"Error fetching transcript: {e}"
+            f"Error Fetching transcript: {e}"
         )

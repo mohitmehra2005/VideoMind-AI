@@ -1,20 +1,21 @@
-# Load variables from the .env file.
-from dotenv import load_dotenv
+import os
 
-# Import Gemini form LangChain.
+from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
 
-# Load the .env file.
+# Load variables from the .env file
 load_dotenv()
 
-def get_llm():
-    """
-    Create and return the Gemini LLM
+# Create the Gemini language model
+def create_llm():
 
-    """
     llm = ChatGoogleGenerativeAI(
-        model="gemini-3.6-flash",
-        teperature = 0
+        model = "gemini-2.5-flash",
+        google_api_key = os.getenv("GEMINI_API_KEY"),
+        model_kwargs = {
+            "temperature": 0.2
+        }
+
     )
-    
+
     return llm
