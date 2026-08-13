@@ -1,10 +1,30 @@
+from backend.transcript import get_transcript
+from backend.document_loader import load_transcript
+from backend.chunking import chunk_documents
 from backend.embeddings import create_embeddings
 from backend.vector_store import create_vector_store
 from backend.retriever import create_retriever
 from backend.prompts import create_prompt
 from backend.llm import create_llm
 
-
+# Process a YouTube video and prepare it for RAG
+def process_video(video_url):
+    
+    # Get the transcript from YouTube
+    transcript = get_transcript(video_url)
+    
+    # Convert the transcript into a LangChain Document
+    document = load_transcript(transcript)
+    
+    # Split the document into smaller chunks
+    chunks = chunk_documents([document])
+    
+    # Create the retriever and Gemini LLM
+    retriever, llm = create_rag(chunks)
+    
+    # Return them so we can ask questions
+    return retriever, llm
+    
 # Create the RAG components
 def create_rag(chunks):
 
