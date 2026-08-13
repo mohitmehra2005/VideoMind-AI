@@ -1,4 +1,4 @@
-from backend.transcript import get_transcript
+from backend.transcript import get_transcript, extract_video_id
 from backend.document_loader import load_transcript
 from backend.chunking import chunk_documents
 from backend.embeddings import create_embeddings
@@ -13,11 +13,18 @@ def process_video(video_url):
     # Get the transcript from YouTube
     transcript = get_transcript(video_url)
     
-    # Convert the transcript into a LangChain Document
-    document = load_transcript(transcript)
+    #Extract the YouTube video ID
+    video_id = extract_video_id(video_url)
     
-    # Split the document into smaller chunks
-    chunks = chunk_documents([document])
+    # Convert the transcript into LangChain Documents
+    # while preserving video ID and timestamp metadata
+    document = load_transcript(
+        transcript,
+        video_id
+    )
+    
+    # Split the documents into smaller chunks
+    chunks = chunk_documents(document)
     
     # Create the retriever and Gemini LLM
     retriever, llm = create_rag(chunks)
@@ -66,5 +73,29 @@ def ask_question(retriever, llm, question):
 
     # Ask Gemini to generate the answer
     response = llm.invoke(prompt)
-
-    return response.content
+    
+    # Store information about the source
+    sources = []
+    
+    # Go through every chunk retrieved by the retriever
+    for chunk in relevant_chunks:
+        
+        # Get the metadata attached to this chunk
+        metadata = chunk.metadata
+        
+        # Create a source object conataining 
+        # the location of the information
+        source = {
+            "video_id": metadata.get("video_id"),
+            "start_time": metadata.get("start_time"),
+            "end_time": metadata.get("end_time")
+        }
+        
+        #Add the source to our list
+        sources.append(source)
+    
+    # Return both the AI answer and it's source
+    return{
+        "answer": response.content,
+        "sources": sources
+    }

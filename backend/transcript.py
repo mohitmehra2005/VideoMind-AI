@@ -50,16 +50,20 @@ def get_transcript(url):
             video_id,
             languages=["en"]
         )
-
-        # Combine all transcript snippets
-        # into one large string
-        transcript_text = " ".join(
-            snippet.text
-            for snippet in transcript
-        )
-
-        # Return the complete transcript
-        return transcript_text
+        
+        # Return the transcript segments directly
+        #
+        # We dont't combine them into one big string anymore.
+        #
+        # We keep each segment because every segment contains
+        # Useful information such as:
+        #
+        # text     -- what is said
+        # start    -- when it is started
+        # duration -- how long it is
+        # 
+        # We need this information later for timestamps.
+        return transcript
 
     except Exception as e:
 
