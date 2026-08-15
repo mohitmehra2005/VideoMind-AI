@@ -12,10 +12,9 @@ def create_llm():
     llm = ChatGoogleGenerativeAI(
         model = "gemini-2.5-flash",
         google_api_key = os.getenv("GEMINI_API_KEY"),
-        model_kwargs = {
-            "temperature": 0.2
-        }
-
+        
+        # Set the temperature explicitly
+        temperature = 0.2
     )
 
     return llm

@@ -2,7 +2,12 @@ from backend.transcript import get_transcript, extract_video_id
 from backend.document_loader import load_transcript
 from backend.chunking import chunk_documents
 from backend.embeddings import create_embeddings
-from backend.vector_store import create_vector_store
+from backend.vector_store import (
+    create_vector_store,
+    save_vector_store,
+    load_vector_store,
+    vector_store_exists
+)
 from backend.retriever import create_retriever
 from backend.prompts import create_prompt
 from backend.llm import create_llm
@@ -10,40 +15,75 @@ from backend.llm import create_llm
 # Process a YouTube video and prepare it for RAG
 def process_video(video_url):
     
-    # Get the transcript from YouTube
-    transcript = get_transcript(video_url)
-    
-    #Extract the YouTube video ID
+    # Extract the YouTube video ID first
     video_id = extract_video_id(video_url)
     
-    # Convert the transcript into LangChain Documents
-    # while preserving video ID and timestamp metadata
-    document = load_transcript(
-        transcript,
-        video_id
-    )
+    # Stop if the url is invalid
+    if not video_id:
+        raise ValueError("invalid YouTube URL.")
     
-    # Split the documents into smaller chunks
-    chunks = chunk_documents(document)
-    
-    # Create the retriever and Gemini LLM
-    retriever, llm = create_rag(chunks)
-    
-    # Return them so we can ask questions
+    # Check whether this video has already been processed
+    if vector_store_exists(video_id):
+        
+        # The FAISS store already exists:
+        # so we don't need to download the transcript again
+        retriever, llm = create_rag(video_id)
+    else:
+
+        # Get the transcript from YouTube
+        transcript = get_transcript(video_url)
+
+        # Convert the transcript into LangChain Documents
+        # while preserving video ID and timestamp metadata
+        document = load_transcript(
+            transcript,
+            video_id
+        )
+
+        # Split the documents into smaller chunks
+        chunks = chunk_documents(document)
+
+        # Create and save the new FAISS store
+        retriever, llm = create_rag(
+            video_id,
+            chunks
+        )
+
+
+    # Return the retriever and LLM
     return retriever, llm
-    
+        
+ 
+        
 # Create the RAG components
-def create_rag(chunks):
+def create_rag(video_id, chunks = None):
 
     # Create the embedding model
     embeddings = create_embeddings()
 
-    # Store the chunks as vectors
-    vector_store = create_vector_store(
-        chunks,
-        embeddings
-    )
-
+    # Check if we already have a saved FAISS store
+    if vector_store_exists(video_id):
+        
+        # If it exists, load it from disk
+        vector_store = load_vector_store(
+            video_id,
+            embeddings
+        )
+        
+    else:
+        
+        # If it doesn't exist, create a new FAISS store
+        vector_store = create_vector_store(
+            chunks,
+            embeddings
+        )
+        
+        # Sve it so we can reuse it later
+        save_vector_store(
+            vector_store,
+            video_id
+        )
+        
     # Create the retriever
     retriever = create_retriever(vector_store)
 
@@ -72,8 +112,21 @@ def ask_question(retriever, llm, question):
     )
 
     # Ask Gemini to generate the answer
-    response = llm.invoke(prompt)
-    
+    try:
+        
+        response = llm.invoke(prompt)
+        
+        # Get the generated answer
+        answer = response.content
+    except Exception as e:
+        
+        # If Gemini fails, don't crash the applicaton
+        answer = (
+            "Sorry, I couldn't generate an asnwer right now. "
+            "The language model may be temorarily unavailable "
+            "or it's usage limit may have been reached."
+        )
+        
     # Store information about the source
     sources = []
     
@@ -96,6 +149,6 @@ def ask_question(retriever, llm, question):
     
     # Return both the AI answer and it's source
     return{
-        "answer": response.content,
+        "answer": answer,
         "sources": sources
     }
