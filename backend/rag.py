@@ -1,3 +1,8 @@
+from backend.cache import (
+    create_cache_key,
+    save_cached_answer,
+    load_cached_answer
+)
 from backend.transcript import get_transcript, extract_video_id
 from backend.document_loader import load_transcript
 from backend.chunking import chunk_documents
@@ -94,8 +99,28 @@ def create_rag(video_id, chunks = None):
 
 
 # Ask a question using the RAG components
-def ask_question(retriever, llm, question):
+def ask_question(retriever, llm, question, video_id):
+    
+    # Create a unique cache key for this video and question
+    cache_key = create_cache_key(
+        video_id,
+        question
+    )
 
+    # Check whether this question was already answered
+    cached_result = load_cached_answer(cache_key)
+
+    # Return the cached answer if it exists
+    if cached_result is not None:
+        
+        # Show that the cache is being used
+        print("Cache hit - returning cached answer.")
+        
+        return cached_result
+    
+    # No cached answer was found
+    print("Cache miss - calling Gemini.")
+    
     # Find the most relevant chunks
     relevant_chunks = retriever.invoke(question)
 
@@ -120,13 +145,23 @@ def ask_question(retriever, llm, question):
         answer = response.content
     except Exception as e:
         
-        # If Gemini fails, don't crash the applicaton
-        answer = (
-            "Sorry, I couldn't generate an asnwer right now. "
-            "The language model may be temorarily unavailable "
-            "or it's usage limit may have been reached."
-        )
+        # Convert the error to text
+        error_message = str(e)
         
+        # Handle Gemini quota/rate-limit errors
+        if "429" in error_message or "RESOURCE_EXHAUSTED" in error_message:
+            
+            answer = (
+                "The AI generation limit has been reached temporarily. "
+                "Plese try again later."
+            )
+        
+        else:
+            # Handle other Gemini errors
+            answer = (
+                "Sorry, I couldn't generate an answer right now."
+            )
+            
     # Store information about the source
     sources = []
     
@@ -147,8 +182,17 @@ def ask_question(retriever, llm, question):
         #Add the source to our list
         sources.append(source)
     
-    # Return both the AI answer and it's source
-    return{
+    # Create the final answer
+    result = {
         "answer": answer,
         "sources": sources
     }
+    
+    # Save the result so the same question
+    # doesn't need another Gemini call
+    save_cached_answer(
+        cache_key,
+        result
+    )
+    
+    return result
