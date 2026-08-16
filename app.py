@@ -1,5 +1,5 @@
 """
-VideoMind AI — UI/UX Layer (Streamlit only)
+OpticAI — UI/UX Layer (Streamlit only)
 =============================================
 Interface only — no transcript extraction, chunking, embeddings, vector DB,
 or LLM calls. All data is placeholder/dummy, and every point where real
@@ -33,7 +33,7 @@ import streamlit as st
 # 1. PAGE CONFIG
 # =========================================================================
 st.set_page_config(
-    page_title="VideoMind AI",
+    page_title="OpticAI",
     page_icon="🧠",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -225,7 +225,7 @@ def render_navbar(active: str = "home"):
         <div class="navbar-fixed">
             <div class="navbar-left">
                 <div class="navbar-logo-mark">🧠</div>
-                <div class="navbar-brand">VideoMind AI</div>
+                <div class="navbar-brand">OpticAI</div>
             </div>
             <div class="navbar-right">
                 <a href="?nav=home" target="_self" class="nav-item {'active' if active == 'home' else ''}">Home</a>
@@ -302,7 +302,7 @@ with st.sidebar:
         """
         <div class="logo-row">
             <div class="logo-mark">🧠</div>
-            <div class="logo-text">VideoMind AI</div>
+            <div class="logo-text">OpticAI</div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -356,7 +356,7 @@ with st.sidebar:
     # --- About ---
     with st.expander("ℹ️ About"):
         st.markdown(
-            "<span class='faint'>VideoMind AI turns any YouTube video into a searchable, "
+            "<span class='faint'>OpticAI turns any YouTube video into a searchable, "
             "chattable knowledge base using Retrieval-Augmented Generation. "
             "Built as a student/MVP project — UI shown here uses placeholder data.</span>",
             unsafe_allow_html=True,
@@ -381,7 +381,7 @@ def render_landing():
                 <div style="display:flex; justify-content:center; margin-bottom:14px;">
                     <div class="logo-mark" style="width:52px; height:52px; font-size:24px; border-radius:14px;">🧠</div>
                 </div>
-                <h1 style="margin-bottom:4px;">VideoMind AI</h1>
+                <h1 style="margin-bottom:4px;">OpticAI</h1>
                 <p class="muted" style="font-size:1rem; margin-bottom:28px;">
                     Paste a YouTube link and chat with the video — powered by RAG.
                 </p>
