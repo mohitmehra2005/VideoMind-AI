@@ -23,148 +23,94 @@ def summarize_video(chunks, llm, video_id):
         print("Summary cache hit - returning cached summary.")
 
         return cached_summary["summary"]
-
-    # Store the summaries of each group of chunks
-    partial_summaries = []
-
-    # Number of chunks to process in one group
-    batch_size = 8
-
-    # Process the chunks in small groups
-    for i in range(0, len(chunks), batch_size):
-
-        # Get one group of chunks
-        batch = chunks[i:i + batch_size]
-
-        # Combine the text from the current group
-        batch_text = "\n\n".join(
-            chunk.page_content
-            for chunk in batch
-        )
-
-        # Create a prompt for this group
-        prompt = f"""
-        You are summarizing part of a video transcript.
-
-        Create a clear and factual summary of the content below.
-        Include the main ideas, important arguments, and key information.
-        Do not add information that is not present in the transcript.
-
-        Transcript section:
-
-        {batch_text}
-
-        Summary:
-        """
-
-        try:
-
-            # Ask Gemini to summarize this group
-            response = llm.invoke(prompt)
-
-            # Get the generated text
-            content = response.content
-
-            # Check whether Gemini returned usable text
-            if content:
-
-                # Store the generated summary
-                partial_summaries.append(content)
-
-            else:
-
-                # Gemini returned an empty response,
-                # possibly because of a safety filter
-                partial_summaries.append(
-                    "This section could not be summarized."
-                )
-
-        except Exception as e:
-
-            # Convert the error to text
-            error_message = str(e)
-
-            # Handle Gemini quota/rate-limit errors
-            if (
-                "429" in error_message
-                or "RESOURCE_EXHAUSTED" in error_message
-            ):
-
-                # Stop instead of making more failed requests
-                return (
-                    "The AI generation limit has been reached "
-                    "temporarily. Please try again later."
-                )
-
-            # Handle other Gemini errors
-            partial_summaries.append(
-                "This section could not be summarized."
-            )
-
-    # Combine all partial summaries
-    combined_summaries = "\n\n".join(
-        partial_summaries
+    
+    # Combine the transcript chunks into one text
+    transcript_text = "\n\n".join(
+        chunk.page_content
+        for chunk in chunks
     )
-
-    # Create the final summary prompt
-    final_prompt = f"""
-    You are creating the final summary of a video.
-
-    Combine the section summaries below into one clear,
-    well-structured summary.
-
+    
+    # Create one sumar prompt
+    prompt = f"""
+    
+    You are summarizing a video transcript
+    
+    Create a clear, factual and well-structured summary
+    of the transcript below
+    
     Include:
     - The main topic
     - The most important ideas
-    - Important arguments or explanations
+    - Important arguments or explanation
     - Major takeaways
-
-    Do not add information that is not supported by the summaries.
-
-    Section summaries:
-
-    {combined_summaries}
-
-    Final summary:
+    
+    Only use information supported by the transcript
+    
+    Do not invent information.
+    Do not make assumptions.
+    Do not discuss information that is not present
+    in the transcript
+    
+    Treanscript:
+    
+    {transcript_text}
+    
+    Summary:
     """
-
+    
     try:
-
-        # Ask Gemini to create the final summary
-        final_response = llm.invoke(final_prompt)
-
-        # Return the final text
+        
+        print("Summary chache miss - calling Gemini once.")
+        
+        # Ask Gemini to summarize the transcript
+        response = llm.invoke(prompt)
+        
+        # Get the generated text
+        content = response.content
+        
+        # Check whether Gemini returned usable text
+        if not content:
+            
+            print("Gemini returned an empty summary.")
+            
+            return(
+                "Sorry. I coludn't generate the video "
+                "summary right now"
+            )
+            
+        # Save the summary in the cache
         result = {
-            "summary": final_response.content
+            "summary": content
         }
-
-        # Save the summary to the cache
+        
         save_cached_answer(
             cache_key,
             result
         )
-
-        # Return the summary
-        return final_response.content
-
+        
+        # Return the generated summary
+        return content
+    
     except Exception as e:
-
+        
         # Convert the error to text
         error_message = str(e)
-
+        
         # Handle Gemini quota/rate-limit errors
-        if (
+        if(
             "429" in error_message
             or "RESOURCE_EXHAUSTED" in error_message
         ):
-
-            return (
-                "The AI generation limit has been reached "
-                "temporarily. Please try again later."
+            
+            return(
+                "The AI genration limit has been reached "
+                "temporarily. Please try gain later."
             )
-
+            
         # Handle other Gemini errors
-        return (
-            "Sorry, I couldn't generate the video summary "
-            "right now."
+        print(f"Summary generation error: {error_message}")
+        
+        return(
+            "Sorry, I couldn't generate the video "
+            "summary right now."
         )

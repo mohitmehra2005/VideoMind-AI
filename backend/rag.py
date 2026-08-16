@@ -27,38 +27,35 @@ def process_video(video_url):
     if not video_id:
         raise ValueError("invalid YouTube URL.")
     
-    # Check whether this video has already been processed
-    if vector_store_exists(video_id):
-        
-        # The FAISS store already exists:
-        # so we don't need to download the transcript again
-        retriever, llm = create_rag(video_id)
-    else:
-
-        # Get the transcript from YouTube
-        transcript = get_transcript(video_url)
-
-        # Convert the transcript into LangChain Documents
-        # while preserving video ID and timestamp metadata
-        document = load_transcript(
-            transcript,
-            video_id
-        )
-
-        # Split the documents into smaller chunks
-        chunks = chunk_documents(document)
-
-        # Create and save the new FAISS store
-        retriever, llm = create_rag(
-            video_id,
-            chunks
-        )
-
-
-    # Return the retriever and LLM
-    return retriever, llm
-        
- 
+    # Fet the transcript from YouTube
+    transcript = get_transcript(video_url)
+    
+    # Convert the transcript into LangChain Dcument
+    # While preserving video ID and timestamp metadata
+    document = load_transcript(
+        transcript,
+        video_id
+    )
+    
+    # Split the documents into smaller chunks
+    chunks = chunk_documents(document)
+    
+    # Create the RAG system
+    #
+    # If a FAISS store already exists,
+    # create_rag() will load it instead of creating it again
+    #
+    # If it does not exists,
+    # create_rag() will create and save it
+    retriever, llm = create_rag(
+        video_id,
+        chunks
+    )
+    
+    # Return all components needed by the API
+    return retriever, llm, chunks
+    
+    
         
 # Create the RAG components
 def create_rag(video_id, chunks = None):
@@ -96,7 +93,6 @@ def create_rag(video_id, chunks = None):
     llm = create_llm()
 
     return retriever, llm
-
 
 # Ask a question using the RAG components
 def ask_question(retriever, llm, question, video_id):
