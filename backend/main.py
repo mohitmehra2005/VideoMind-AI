@@ -1,84 +1,89 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from backend.auth import router as auth_router
 from backend.rag import process_video, ask_question
-from backend.summarize import summarize_video
+from backend.summarize import summarize_video, summarize_video_structured
 from backend.quiz import generate_quiz
+from backend.transcript import extract_video_id
 
 # Create the FastAPI application
 app = FastAPI(
-    title = "VideoMind AI"
+    title="OpticAI Backend"
 )
+
+# Enable CORS for frontend communication (localhost:3000, 3001)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:3001",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Include Authentication Router (/auth/google/login, /auth/google/callback, /auth/me, /auth/logout)
+app.include_router(auth_router)
 
 # Store the RAG system for processed videos
 video_sessions = {}
 
 # Request body for processing a video
 class VideoRequest(BaseModel):
-    
-    # YouTube video URL
     video_url: str
-    
+
 # Request body for asking a question
 class AskRequest(BaseModel):
-    
-    # YouTube video ID
     video_id: str
-    
-    # User's question
     question: str
-    
+
 # Health-check endpoint
 @app.get("/")
 def root():
-    
-    return{
-        "message": "VideoMind AI backend is running!"
+    return {
+        "message": "OpticAI backend is running!",
+        "status": "online"
     }
-    
+
 # Process a YouTube video
 @app.post("/video")
 def process_video_endpoint(request: VideoRequest):
-    
-    # Proces the video and create the RAG system
     retriever, llm, chunks = process_video(
         request.video_url
     )
     
-    # Extract the YouTube video ID
-    video_id = request.video_url.split("v=")[1].split("&")[0]
+    video_id = extract_video_id(request.video_url) or request.video_url.split("v=")[1].split("&")[0]
     
-    # Store the RAG components for this video
     video_sessions[video_id] = {
         "retriever": retriever,
         "llm": llm,
-        "chunks": chunks
-    }  
+        "chunks": chunks,
+        "url": request.video_url
+    }
     
-    return{
+    return {
         "message": "Video processed successfully.",
         "video_id": video_id
     }
-    
+
 # Ask a question about a processed video
 @app.post("/ask")
 def ask_video_question(request: AskRequest):
-    
-    # Check whether the video has been processed
     if request.video_id not in video_sessions:
+        raise HTTPException(
+            status_code=404,
+            detail="Video has not been processed yet."
+        )
         
-       raise HTTPException(
-           status_code = 404,
-           detail = "Video has not been processed yet."
-       )
-        
-    # Get th RAG components for this video
     session = video_sessions[request.video_id]
-    
     retriever = session["retriever"]
     llm = session["llm"]
     
-    # Ask the RAG system the question
     result = ask_question(
         retriever,
         llm,
@@ -86,90 +91,100 @@ def ask_video_question(request: AskRequest):
         request.video_id
     )
     
-    # Return the RAG response
     return result
 
 # Create a summary of a processed video
 @app.post("/summary")
 def summarize_video_endpoint(request: VideoRequest):
+    video_id = extract_video_id(request.video_url) or request.video_url.split("v=")[1].split("&")[0]
     
-    # Extract the video ID from the URL
-    video_id = request.video_url.split("v=")[1].split("&")[0]
-    
-    # Check whether the video has been processed
     if video_id not in video_sessions:
-        
         raise HTTPException(
-            status_code = 404,
-            detail = "Video has not been processed yet."
+            status_code=404,
+            detail="Video has not been processed yet."
         )
         
-    # Get the RAG components and chunks for this video
     session = video_sessions[video_id]
-    
     llm = session["llm"]
     chunks = session["chunks"]
     
-    # Generate the video summary
-    summary = summarize_video(
-        chunks,
-        llm,
-        video_id
-    )
+    summary = summarize_video(chunks, llm, video_id)
     
-    # Handle Gemini quota errors
     if isinstance(summary, str) and "AI generation limit" in summary:
-        
-        raise HTTPException(
-            status_code = 429,
-            detail = summary
-        )
+        raise HTTPException(status_code=429, detail=summary)
     
-    # Return the summary
-    return{
+    return {
         "video_id": video_id,
         "summary": summary
     }
+
+# Full structured analysis endpoint for OpticAI workspace
+@app.post("/analysis")
+def full_analysis_endpoint(request: VideoRequest):
+    video_id = extract_video_id(request.video_url) or request.video_url.split("v=")[1].split("&")[0]
     
-# Generate a quiz for a processed video
-@app.post("/quiz")
-def generate_quiz_endpoint(request: VideoRequest):
-    
-    # Extract the videoID from the URL
-    video_id = request.video_url.split("v=")[1].split("&")[0]
-    
-    # Check whether the video has been processed
     if video_id not in video_sessions:
-        
-        raise HTTPException(
-            status_code = 404,
-            detail = "Video has not been processed yet."
-        )
-    
-    # Get the session for this video
+        # Auto-process if not yet in memory
+        try:
+            retriever, llm, chunks = process_video(request.video_url)
+            video_sessions[video_id] = {
+                "retriever": retriever,
+                "llm": llm,
+                "chunks": chunks,
+                "url": request.video_url
+            }
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Failed to process video: {str(e)}")
+            
     session = video_sessions[video_id]
-    
-    # Fet the LLM and transcript chunks
     llm = session["llm"]
     chunks = session["chunks"]
     
-    # Generate the quiz
-    quiz = generate_quiz(
-        chunks,
-        llm,
-        video_id
-    )
+    # Generate structured summary
+    structured_data = summarize_video_structured(chunks, llm, video_id)
     
-    # Handle Gemini quota errors
-    if isinstance(quiz, str) and "AI generation limit" in quiz:
+    # Generate quiz
+    try:
+        quiz_data = generate_quiz(chunks, llm, video_id)
+    except Exception:
+        quiz_data = []
         
+    return {
+        "video": {
+            "id": video_id,
+            "url": request.video_url,
+            "title": f"Video {video_id}",
+            "channel": "YouTube Creator",
+            "duration": "Indexed Duration",
+            "thumbnail": f"https://img.youtube.com/vi/{video_id}/maxresdefault.jpg"
+        },
+        "executive_summary": structured_data.get("executive_summary", ""),
+        "structured_summary": structured_data.get("structured_summary", []),
+        "key_takeaways": structured_data.get("key_takeaways", []),
+        "quiz": quiz_data
+    }
+
+# Generate a quiz for a processed video
+@app.post("/quiz")
+def generate_quiz_endpoint(request: VideoRequest):
+    video_id = extract_video_id(request.video_url) or request.video_url.split("v=")[1].split("&")[0]
+    
+    if video_id not in video_sessions:
         raise HTTPException(
-            status_code = 429,
-            detail = quiz
+            status_code=404,
+            detail="Video has not been processed yet."
         )
+    
+    session = video_sessions[video_id]
+    llm = session["llm"]
+    chunks = session["chunks"]
+    
+    quiz = generate_quiz(chunks, llm, video_id)
+    
+    if isinstance(quiz, str) and "AI generation limit" in quiz:
+        raise HTTPException(status_code=429, detail=quiz)
         
-    # Return the quiz
-    return{
+    return {
         "video_id": video_id,
         "quiz": quiz
     }

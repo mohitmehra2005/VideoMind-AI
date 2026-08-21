@@ -1,22 +1,30 @@
-
-# Environment variables / API keys
+# Environment variables
 .env
+.env.local
 
 # Python
 __pycache__/
 *.py[cod]
 
-# Virtual environment
+# Virtual environments
 .venv/
 venv/
+
+# Node.js
+node_modules/
+frontend/node_modules/
+
+# Next.js build files
+.next/
+frontend/.next/
+
+# Local data
+vector_stores/
+cache/
 
 # VS Code
 .vscode/
 
-# OS files
+# OS
 .DS_Store
 Thumbs.db
-
-# Local vector stores
-vector_stores/
-cache/
