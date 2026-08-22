@@ -8,6 +8,8 @@ from backend.summarize import summarize_video, summarize_video_structured
 from backend.quiz import generate_quiz
 from backend.transcript import extract_video_id
 
+from pytubefix import YouTube
+
 # Create the FastAPI application
 app = FastAPI(
     title="OpticAI Backend"
@@ -33,6 +35,43 @@ app.include_router(auth_router)
 # Store the RAG system for processed videos
 video_sessions = {}
 
+def get_video_id(video_url: str):
+    """
+    Extract and validate the YouTube video ID.
+    Raises a clean HTTP error if the URL is invalid.
+    """
+    video_id = extract_video_id(video_url)
+
+    if not video_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid or unsupported YouTube URL."
+        )
+
+    return video_id
+
+def get_video_metadata(video_url: str):
+    try:
+        yt = YouTube(video_url)
+
+        return {
+            "title": yt.title,
+            "channel": yt.author,
+            "duration": yt.length,
+            "thumbnail": yt.thumbnail_url
+        }
+
+    except Exception as e:
+        print(f"Metadata error: {e}")
+
+        return {
+            "title": "YouTube Video",
+            "channel": "Unknown Channel",
+            "duration": 0,
+            "thumbnail": None
+        }
+        
+
 # Request body for processing a video
 class VideoRequest(BaseModel):
     video_url: str
@@ -53,23 +92,40 @@ def root():
 # Process a YouTube video
 @app.post("/video")
 def process_video_endpoint(request: VideoRequest):
-    retriever, llm, chunks = process_video(
-        request.video_url
-    )
-    
-    video_id = extract_video_id(request.video_url) or request.video_url.split("v=")[1].split("&")[0]
-    
-    video_sessions[video_id] = {
-        "retriever": retriever,
-        "llm": llm,
-        "chunks": chunks,
-        "url": request.video_url
-    }
-    
-    return {
-        "message": "Video processed successfully.",
-        "video_id": video_id
-    }
+    video_id = get_video_id(request.video_url)
+
+    # If the video is already processed in the current server session,
+    # do not process it again.
+    if video_id in video_sessions:
+        return {
+            "message": "Video is already processed.",
+            "video_id": video_id,
+            "status": "ready"
+        }
+
+    try:
+        retriever, llm, chunks = process_video(
+            request.video_url
+        )
+
+        video_sessions[video_id] = {
+            "retriever": retriever,
+            "llm": llm,
+            "chunks": chunks,
+            "url": request.video_url
+        }
+
+        return {
+            "message": "Video processed successfully.",
+            "video_id": video_id,
+            "status": "ready"
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Failed to process video: {str(e)}"
+        )
 
 # Ask a question about a processed video
 @app.post("/ask")
@@ -96,7 +152,7 @@ def ask_video_question(request: AskRequest):
 # Create a summary of a processed video
 @app.post("/summary")
 def summarize_video_endpoint(request: VideoRequest):
-    video_id = extract_video_id(request.video_url) or request.video_url.split("v=")[1].split("&")[0]
+    video_id = get_video_id(request.video_url)
     
     if video_id not in video_sessions:
         raise HTTPException(
@@ -121,7 +177,7 @@ def summarize_video_endpoint(request: VideoRequest):
 # Full structured analysis endpoint for OpticAI workspace
 @app.post("/analysis")
 def full_analysis_endpoint(request: VideoRequest):
-    video_id = extract_video_id(request.video_url) or request.video_url.split("v=")[1].split("&")[0]
+    video_id = get_video_id(request.video_url)
     
     if video_id not in video_sessions:
         # Auto-process if not yet in memory
@@ -140,6 +196,9 @@ def full_analysis_endpoint(request: VideoRequest):
     llm = session["llm"]
     chunks = session["chunks"]
     
+    metadata = get_video_metadata(request.video_url)
+    
+    
     # Generate structured summary
     structured_data = summarize_video_structured(chunks, llm, video_id)
     
@@ -153,10 +212,10 @@ def full_analysis_endpoint(request: VideoRequest):
         "video": {
             "id": video_id,
             "url": request.video_url,
-            "title": f"Video {video_id}",
-            "channel": "YouTube Creator",
-            "duration": "Indexed Duration",
-            "thumbnail": f"https://img.youtube.com/vi/{video_id}/maxresdefault.jpg"
+            "title": metadata["title"],
+            "channel": metadata["channel"],
+            "duration": metadata["duration"],
+            "thumbnail": metadata["thumbnail"]
         },
         "executive_summary": structured_data.get("executive_summary", ""),
         "structured_summary": structured_data.get("structured_summary", []),
@@ -167,8 +226,7 @@ def full_analysis_endpoint(request: VideoRequest):
 # Generate a quiz for a processed video
 @app.post("/quiz")
 def generate_quiz_endpoint(request: VideoRequest):
-    video_id = extract_video_id(request.video_url) or request.video_url.split("v=")[1].split("&")[0]
-    
+    video_id = get_video_id(request.video_url)
     if video_id not in video_sessions:
         raise HTTPException(
             status_code=404,

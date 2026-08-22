@@ -19,7 +19,11 @@ interface Message {
   role: "user" | "assistant";
   content: string;
   timestamp?: string;
-  sources?: { time: string; seconds: number }[];
+  sources?: {
+    time: string;
+    seconds: number;
+    endSeconds?: number;
+  }[];
 }
 
 export const AskOpticTab: React.FC = () => {
@@ -62,73 +66,125 @@ export const AskOpticTab: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
 
-  const handleSend = (textToSend?: string) => {
-    const query = textToSend || input;
-    if (!query.trim() || isLoading) return;
+const handleSend = async (textToSend?: string) => {
+  const query = textToSend || input;
 
-    const userMessage: Message = { role: "user", content: query };
-    setMessages((prev) => [...prev, userMessage]);
-    if (!textToSend) setInput("");
-    setIsLoading(true);
+  if (!query.trim() || isLoading) return;
 
-    // Track exploration progress
-    setExplorationProgress((p) => ({ ...p, questionsCount: p.questionsCount + 1 }));
+  // Add the user's message
+  const userMessage: Message = {
+    role: "user",
+    content: query,
+  };
 
-    setTimeout(() => {
-      let answerText = "";
-      let timestampCitation = "04:30";
-      let sourceList: { time: string; seconds: number }[] = [];
+  setMessages((prev) => [...prev, userMessage]);
 
-      if (query.toLowerCase().includes("thesis") || query.toLowerCase().includes("main idea")) {
-        answerText = "The main thesis is that artificial neural networks model complex functional relationships by combining weighted linear matrix multiplications ($W_2 W_1 x$) with non-linear activation functions like ReLU ($max(0, x)$).";
-        timestampCitation = "02:15";
-        sourceList = [
-          { time: "02:15", seconds: 135 },
-          { time: "04:30", seconds: 270 }
-        ];
-      } else if (query.toLowerCase().includes("first 5") || query.toLowerCase().includes("first few")) {
-        answerText = "In the opening section (00:00 - 05:30), the speaker establishes the mathematical formulation of an artificial neuron: $z = \\sum(w_i x_i) + b$, showing how inputs are weighted and combined with bias offsets.";
-        timestampCitation = "01:20";
-        sourceList = [
-          { time: "00:45", seconds: 45 },
-          { time: "02:15", seconds: 135 }
-        ];
-      } else if (query.toLowerCase().includes("example")) {
-        answerText = "The speaker uses an image classification problem (recognizing handwritten digits 0-9) as the primary concrete visual intuition throughout the derivations.";
-        timestampCitation = "06:10";
-        sourceList = [
-          { time: "06:10", seconds: 370 },
-          { time: "08:24", seconds: 504 }
-        ];
-      } else if (query.toLowerCase().includes("backpropagation") || query.toLowerCase().includes("formula")) {
-        answerText = "Backpropagation calculates partial derivatives of the cost function layer-by-layer using the multivariate calculus chain rule: $\\frac{\\partial C}{\\partial w_{ij}} = \\frac{\\partial C}{\\partial a_j} \\cdot \\frac{\\partial a_j}{\\partial z_j} \\cdot \\frac{\\partial z_j}{\\partial w_{ij}}$, allowing gradient descent updates.";
-        timestampCitation = "13:40";
-        sourceList = [
-          { time: "11:05", seconds: 665 },
-          { time: "13:40", seconds: 820 },
-          { time: "16:20", seconds: 980 }
-        ];
-      } else {
-        answerText = `Regarding "${query}": The video explains that neural networks optimize weights by minimizing cost discrepancies through gradient descent.`;
-        timestampCitation = "08:24";
-        sourceList = [
-          { time: "08:24", seconds: 504 },
-          { time: "11:05", seconds: 665 }
-        ];
+  if (!textToSend) {
+    setInput("");
+  }
+
+  setIsLoading(true);
+
+  try {
+    // Get the current video ID
+    const videoId = activeVideo?.id;
+
+    if (!videoId) {
+      throw new Error("No active video found.");
+    }
+
+    // Send the question to the FastAPI backend
+    const response = await fetch("http://127.0.0.1:8000/ask", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        video_id: videoId,
+        question: query,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+
+      throw new Error(
+        errorData.detail || "Failed to get an answer."
+      );
+    }
+
+    const data = await response.json();
+
+    // Convert seconds into a readable timestamp
+    const formatTime = (seconds: number) => {
+      const totalSeconds = Math.floor(seconds);
+
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor(
+        (totalSeconds % 3600) / 60
+      );
+      const secs = totalSeconds % 60;
+
+      if (hours > 0) {
+        return `${hours.toString().padStart(2, "0")}:${minutes
+          .toString()
+          .padStart(2, "0")}:${secs
+          .toString()
+          .padStart(2, "0")}`;
       }
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: answerText,
-          timestamp: timestampCitation,
-          sources: sourceList
-        }
-      ]);
-      setIsLoading(false);
-    }, 600);
-  };
+      return `${minutes
+        .toString()
+        .padStart(2, "0")}:${secs
+        .toString()
+        .padStart(2, "0")}`;
+    };
+
+    // Convert backend sources into frontend sources
+    const sources = (data.sources || []).map(
+      (source: {
+        start_time: number;
+        end_time?: number;
+      }) => ({
+        time: formatTime(source.start_time),
+        seconds: source.start_time,
+        endSeconds: source.end_time,
+      })
+    );
+
+    // Add the AI response
+    const assistantMessage: Message = {
+      role: "assistant",
+      content: data.answer,
+      timestamp: sources[0]?.time,
+      sources,
+    };
+
+    setMessages((prev) => [
+      ...prev,
+      assistantMessage,
+    ]);
+
+  } catch (error) {
+    console.error("Ask OpticAI error:", error);
+
+    const errorMessage: Message = {
+      role: "assistant",
+      content:
+        error instanceof Error
+          ? error.message
+          : "Sorry, something went wrong while asking OpticAI.",
+    };
+
+    setMessages((prev) => [
+      ...prev,
+      errorMessage,
+    ]);
+
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   return (
     <div className="max-w-4xl mx-auto w-full py-6 px-4 sm:px-6 flex flex-col h-[calc(100vh-170px)] min-h-[500px]">

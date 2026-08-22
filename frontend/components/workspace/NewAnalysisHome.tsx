@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Link2, ArrowRight, AlertCircle, Sparkles, Compass } from "lucide-react";
+import { Link2, ArrowRight, AlertCircle, FileText, MessageSquare, Clock, CheckSquare } from "lucide-react";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { isValidYouTubeUrl } from "@/utils/mockVideoData";
 
@@ -26,22 +26,16 @@ export const NewAnalysisHome: React.FC = () => {
     startAnalysis(url);
   };
 
-  const handleExampleClick = (exampleUrl: string) => {
-    setUrl(exampleUrl);
-    setError(null);
-    startAnalysis(exampleUrl);
-  };
-
   return (
-    <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 max-w-4xl mx-auto w-full py-20 text-center relative overflow-hidden">
+    <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 max-w-4xl mx-auto w-full py-14 sm:py-18 text-center relative overflow-hidden">
       
       {/* Background Soft Glow Aura */}
       <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[260px] bg-gradient-to-r from-indigo-500/15 via-cyan-500/15 to-transparent blur-[100px] pointer-events-none" />
 
-      <div className="relative z-10 w-full max-w-2xl space-y-8">
+      <div className="relative z-10 w-full max-w-2xl space-y-6 sm:space-y-7">
         
         {/* Main Eyebrow & Headline */}
-        <div className="space-y-4">
+        <div className="space-y-3.5">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-xs font-semibold uppercase tracking-wider shadow-[0_0_15px_rgba(56,189,248,0.15)]">
             <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_8px_#38BDF8]" />
             <span>OpticAI Neural Workspace</span>
@@ -78,7 +72,7 @@ export const NewAnalysisHome: React.FC = () => {
 
             <button
               type="submit"
-              className="w-full sm:w-auto px-7 py-3.5 bg-gradient-to-r from-indigo-500 to-cyan-400 hover:brightness-110 text-white font-semibold text-sm rounded-xl shadow-lg shadow-indigo-500/25 transition-all flex items-center justify-center gap-2 shrink-0 transform hover:-translate-y-0.5"
+              className="w-full sm:w-auto px-7 py-3.5 bg-gradient-to-r from-indigo-500 to-cyan-400 hover:brightness-110 text-white font-semibold text-sm rounded-xl shadow-lg shadow-indigo-500/25 transition-all flex items-center justify-center gap-2 shrink-0 transform hover:-translate-y-0.5 cursor-pointer"
             >
               <span>Analyze</span>
               <ArrowRight className="w-4 h-4" />
@@ -94,24 +88,73 @@ export const NewAnalysisHome: React.FC = () => {
           )}
         </form>
 
-        {/* Suggestion Chips */}
-        <div className="pt-2 flex flex-wrap items-center justify-center gap-2">
-          <span className="text-xs text-slate-500 mr-1 flex items-center gap-1">
-            <Compass className="w-3.5 h-3.5" />
-            <span>Try an example:</span>
-          </span>
-          <button
-            onClick={() => handleExampleClick("https://www.youtube.com/watch?v=kCc8FmEb1nY")}
-            className="px-3.5 py-1.5 rounded-lg bg-white/[0.04] hover:bg-cyan-500/10 border border-white/10 hover:border-cyan-500/30 text-xs text-slate-300 hover:text-cyan-200 transition-all"
-          >
-            Neural Networks from Scratch
-          </button>
-          <button
-            onClick={() => handleExampleClick("https://www.youtube.com/watch?v=aircAruvnKk")}
-            className="px-3.5 py-1.5 rounded-lg bg-white/[0.04] hover:bg-cyan-500/10 border border-white/10 hover:border-cyan-500/30 text-xs text-slate-300 hover:text-cyan-200 transition-all"
-          >
-            Attention Is All You Need
-          </button>
+        {/* Subtle Capabilities Row */}
+        <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-2.5 pt-0.5">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.03] border border-white/[0.07] text-[11px] font-medium text-slate-300">
+            <FileText className="w-3 h-3 text-cyan-400" />
+            <span>AI Summaries</span>
+          </div>
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.03] border border-white/[0.07] text-[11px] font-medium text-slate-300">
+            <MessageSquare className="w-3 h-3 text-indigo-400" />
+            <span>Grounded Q&A</span>
+          </div>
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.03] border border-white/[0.07] text-[11px] font-medium text-slate-300">
+            <Clock className="w-3 h-3 text-cyan-400" />
+            <span>Timestamp Sources</span>
+          </div>
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.03] border border-white/[0.07] text-[11px] font-medium text-slate-300">
+            <CheckSquare className="w-3 h-3 text-emerald-400" />
+            <span>Interactive Quizzes</span>
+          </div>
+        </div>
+
+        {/* How OpticAI Works — 3 Refined Horizontal Steps */}
+        <div className="pt-4 border-t border-white/[0.06] text-left">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+            
+            {/* Step 1: Ingest */}
+            <div className="p-4 sm:p-4.5 rounded-2xl bg-[#0c101a]/60 hover:bg-[#111726]/85 backdrop-blur-md border border-white/[0.09] hover:border-cyan-400/35 shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.4),0_0_16px_rgba(56,189,248,0.1)] transform hover:-translate-y-1 transition-all duration-300 ease-out space-y-2 group cursor-default">
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-xs font-bold text-cyan-400">01</span>
+                <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500 group-hover:text-slate-400 transition-colors">Ingest</span>
+              </div>
+              <h3 className="text-xs font-semibold text-white tracking-tight group-hover:text-cyan-200 transition-colors">
+                Extract transcript
+              </h3>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                Capture and organize the video&apos;s spoken content with accurate timestamps.
+              </p>
+            </div>
+
+            {/* Step 2: Vectorize */}
+            <div className="p-4 sm:p-4.5 rounded-2xl bg-[#0c101a]/60 hover:bg-[#111726]/85 backdrop-blur-md border border-white/[0.09] hover:border-indigo-400/35 shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.4),0_0_16px_rgba(99,102,241,0.1)] transform hover:-translate-y-1 transition-all duration-300 ease-out space-y-2 group cursor-default">
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-xs font-bold text-indigo-400">02</span>
+                <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500 group-hover:text-slate-400 transition-colors">Vectorize</span>
+              </div>
+              <h3 className="text-xs font-semibold text-white tracking-tight group-hover:text-indigo-200 transition-colors">
+                Build knowledge
+              </h3>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                Chunk and index the content into a searchable knowledge base.
+              </p>
+            </div>
+
+            {/* Step 3: Interact */}
+            <div className="p-4 sm:p-4.5 rounded-2xl bg-[#0c101a]/60 hover:bg-[#111726]/85 backdrop-blur-md border border-white/[0.09] hover:border-emerald-400/35 shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.4),0_0_16px_rgba(52,211,153,0.1)] transform hover:-translate-y-1 transition-all duration-300 ease-out space-y-2 group cursor-default">
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-xs font-bold text-emerald-400">03</span>
+                <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500 group-hover:text-slate-400 transition-colors">Interact</span>
+              </div>
+              <h3 className="text-xs font-semibold text-white tracking-tight group-hover:text-emerald-200 transition-colors">
+                Explore & learn
+              </h3>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                Generate summaries, ask grounded questions, view sources, and take quizzes.
+              </p>
+            </div>
+
+          </div>
         </div>
 
       </div>

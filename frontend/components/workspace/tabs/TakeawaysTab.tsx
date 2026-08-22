@@ -17,43 +17,12 @@ export const TakeawaysTab: React.FC = () => {
 
   if (!activeVideo?.takeaways) return null;
 
-  const takeaways = activeVideo.takeawaysWithMeta || [
-    {
-      id: 1,
-      title: "Linear Collapse without Activations",
-      text: "Linear layer stacking without non-linear activations mathematically collapses into a single-layer matrix multiplication.",
-      timestamp: "04:30",
-      seconds: 270
-    },
-    {
-      id: 2,
-      title: "Curvature & Non-Linear Mapping",
-      text: "Activation functions introduce curvature and non-linearity, allowing neural networks to solve complex boundary partitions.",
-      timestamp: "06:10",
-      seconds: 370
-    },
-    {
-      id: 3,
-      title: "Differentiable Cost Formulation",
-      text: "Cost functions measure prediction discrepancy and must be differentiable to permit gradient descent updates.",
-      timestamp: "11:05",
-      seconds: 665
-    },
-    {
-      id: 4,
-      title: "Chain Rule Backpropagation",
-      text: "Backpropagation applies the multivariate chain rule to systematically calculate weight derivatives from output to input.",
-      timestamp: "13:40",
-      seconds: 820
-    },
-    {
-      id: 5,
-      title: "Learning Rate Optimization",
-      text: "The learning rate (η) governs step size in parameter space; too large oscillates, too small stalls convergence.",
-      timestamp: "16:20",
-      seconds: 980
-    }
-  ];
+  const takeaways = activeVideo.takeaways.map((text, index) => ({
+    id: index + 1,
+    title: `Key Takeaway ${index + 1}`,
+    text,
+    timestamp: activeVideo.takeawaysWithMeta?.[index]?.timestamp || activeVideo.transcript?.[index]?.time || "00:00",
+  }));
 
   return (
     <div className="max-w-4xl mx-auto w-full py-6 px-4 sm:px-6 space-y-6">

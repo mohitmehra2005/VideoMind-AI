@@ -92,8 +92,8 @@ interface WorkspaceContextType {
   pendingChatMessage: string | null;
   setPendingChatMessage: React.Dispatch<React.SetStateAction<string | null>>;
   explorationProgress: ExplorationProgress;
-  setExplorationProgress: React.Dispatch<React.SetStateAction<ExplorationProgress>>;
-  startAnalysis: (url: string) => void;
+  setExplorationProgress: React.Dispatch<React.SetStateAction<ExplorationProgress>>; 
+  startAnalysis: (url: string) => Promise<void>;  
   resetToNewAnalysis: () => void;
   jumpToTranscript: (timestamp: string) => void;
   sendToAskOptic: (prompt: string) => void;
@@ -161,13 +161,9 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [explorationProgress, setExplorationProgress] = useState<ExplorationProgress>(DEFAULT_PROGRESS);
 
   // Initialize history based on auth mode
-  useEffect(() => {
-    if (!user.isGuest) {
-      setHistory(SAMPLE_SIGNED_IN_HISTORY);
-    } else {
-      setHistory([]);
-    }
-  }, [user.isGuest]);
+ useEffect(() => {
+  setHistory([]);
+}, [user.isGuest]);
 
   // Track exploration progress on tab switches
   useEffect(() => {
@@ -187,11 +183,66 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     });
   };
 
-  const startAnalysis = (url: string) => {
-    setIsAnalyzing(true);
-    setProcessingStage(0);
-    setProcessingError(null);
-  };
+const startAnalysis = async (url: string) => {
+  setIsAnalyzing(true);
+  setProcessingStage(0);
+  setProcessingError(null);
+
+  try {
+    const response = await fetch("http://127.0.0.1:8000/analysis", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        video_url: url,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+
+      throw new Error(
+        errorData.detail || "Failed to analyze the video."
+      );
+    }
+
+    const data = await response.json();
+
+    const analyzedVideo: VideoHistoryItem = {
+      id: data.video.id,
+      url: data.video.url,
+      title: data.video.title,
+      channel: data.video.channel,
+      duration: data.video.duration,
+      timestamp: "Just now",
+      thumbnail: data.video.thumbnail,
+
+      executiveSummary: data.executive_summary,
+      structuredSummary: data.structured_summary.map((section: any) => ({
+        ...section,
+        startTimestamp: section.start_timestamp,
+        endTimestamp: section.end_timestamp,
+      })),
+      takeaways: data.key_takeaways,
+      quiz: data.quiz,
+    };
+
+    setActiveVideo(analyzedVideo);
+    addToHistory(analyzedVideo);
+
+    setIsAnalyzing(false);
+
+    } catch (error) {
+    console.error("Analysis error:", error);
+
+    setProcessingError(
+      error instanceof Error
+        ? error.message
+        : "Something went wrong while analyzing the video."
+    );
+  }
+};
 
   const resetToNewAnalysis = () => {
     setActiveVideo(null);

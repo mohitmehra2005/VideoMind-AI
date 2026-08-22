@@ -50,24 +50,23 @@ def get_transcript(url):
             video_id,
             languages=["en"]
         )
-        
-        # Return the transcript segments directly
-        #
-        # We dont't combine them into one big string anymore.
-        #
-        # We keep each segment because every segment contains
-        # Useful information such as:
-        #
-        # text     -- what is said
-        # start    -- when it is started
-        # duration -- how long it is
-        # 
-        # We need this information later for timestamps.
-        return transcript
+
+        # Convert transcript into a normal list
+        # while preserving text and timestamps
+        segments = []
+
+        for item in transcript:
+            segments.append({
+                "text": item.text,
+                "start": item.start,
+                "duration": item.duration
+            })
+
+        return segments
 
     except Exception as e:
 
         # Show a clear error if something goes wrong
         raise Exception(
-            f"Error Fetching transcript: {e}"
+            f"Error fetching transcript: {e}"
         )

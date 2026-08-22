@@ -74,9 +74,9 @@ export const Hero: React.FC<HeroProps> = ({ onGuestMode, onSuccess }) => {
               {/* Watch Interactive Demo Button */}
               <button
                 onClick={scrollToDemo}
-                className="inline-flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-[#0c121e]/90 hover:bg-[#131d2e] border border-white/15 hover:border-cyan-500/40 text-slate-100 hover:text-white transition-all shadow-[0_4px_16px_rgba(0,0,0,0.5)] hover:shadow-[0_0_20px_rgba(56,189,248,0.2)] group shrink-0"
+                className="inline-flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-white/[0.06] hover:bg-cyan-500/[0.12] backdrop-blur-xl border border-white/20 hover:border-cyan-400/50 text-slate-100 hover:text-white transition-all shadow-[0_4px_20px_rgba(0,0,0,0.35),0_0_15px_rgba(56,189,248,0.12),inset_0_1px_1px_rgba(255,255,255,0.22)] hover:shadow-[0_6px_24px_rgba(0,0,0,0.4),0_0_24px_rgba(56,189,248,0.28),inset_0_1px_1px_rgba(255,255,255,0.38)] group shrink-0"
               >
-                <span className="w-5 h-5 rounded-full bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 flex items-center justify-center shadow-[0_0_8px_rgba(56,189,248,0.35)] group-hover:scale-110 group-hover:bg-cyan-500/30 transition-all">
+                <span className="w-5 h-5 rounded-full bg-cyan-500/20 border border-cyan-400/30 text-cyan-300 flex items-center justify-center shadow-[0_0_8px_rgba(56,189,248,0.35)] group-hover:scale-110 group-hover:bg-cyan-500/30 transition-all">
                   <Play className="w-2.5 h-2.5 fill-current ml-0.5" />
                 </span>
                 <span className="font-semibold tracking-tight">Watch Interactive Demo</span>
@@ -84,10 +84,10 @@ export const Hero: React.FC<HeroProps> = ({ onGuestMode, onSuccess }) => {
               </button>
 
               {/* Connected Visible Supporting Context */}
-              <div className="flex items-center gap-2 text-slate-300 font-medium pl-1 sm:pl-0">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.7)] shrink-0" />
+              <div className="inline-flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-white/[0.04] backdrop-blur-xl border border-white/15 text-slate-300 font-medium shadow-[0_4px_16px_rgba(0,0,0,0.25),0_0_12px_rgba(56,189,248,0.08),inset_0_1px_1px_rgba(255,255,255,0.15)]">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] shrink-0 animate-pulse" />
                 <span className="text-slate-200 font-semibold">Free guest preview</span>
-                <span className="text-slate-600 hidden sm:inline">•</span>
+                <span className="text-slate-500 hidden sm:inline">•</span>
                 <span className="text-slate-400 hidden sm:inline text-[11px]">Explore before getting started</span>
               </div>
             </div>

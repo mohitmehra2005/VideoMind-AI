@@ -12,7 +12,7 @@ def summarize_video(chunks, llm, video_id):
     # Create a unique key for this video's summary
     cache_key = create_cache_key(
         video_id,
-        "video_summary"
+        "video_summary_v2"
     )
 
     # Check whether this video already has a summary
@@ -33,25 +33,40 @@ def summarize_video(chunks, llm, video_id):
     
     # Create one summary prompt
     prompt = f"""
-    You are summarizing a video transcript.
-    
-    Create a clear, factual and well-structured summary of the transcript below.
-    
-    Include:
-    - The main topic
-    - The most important ideas
-    - Important arguments or explanation
-    - Major takeaways
-    
-    Only use information supported by the transcript.
-    Do not invent information.
-    Do not make assumptions.
-    
-    Transcript:
-    {transcript_text}
-    
-    Summary:
-    """
+    You are summarizing a YouTube video transcript.
+
+Create a comprehensive, factual, and well-structured summary
+of the ENTIRE transcript.
+
+IMPORTANT RULES:
+
+1. Cover the video from the beginning to the end.
+2. Include all major topics, arguments, events, and important ideas.
+3. Do not focus only on the first part of the transcript.
+4. Do not stop summarizing halfway through the video.
+5. For long videos, provide BETWEEN 8 AND 15 meaningful summary points.
+6. Do not return fewer than 8 points unless the transcript genuinely
+   contains fewer than 8 distinct meaningful topics.
+7. Each bullet point must cover a distinct important topic, idea,
+   argument, event, or conclusion.
+8. Keep each point concise but informative.
+9. Use bullet points starting with "* ".
+10. Use **bold headings** at the beginning of each point when helpful.
+11. Only use information supported by the transcript.
+12. Do not invent information.
+13. Do not make assumptions.
+
+IMPORTANT:
+The goal is to help the user understand the FULL video, not just
+give a short overview. Make sure important topics from the middle
+and final parts of the transcript are also included.
+
+Transcript:
+
+{transcript_text}
+
+Summary:
+"""
     
     try:
         print("Summary cache miss - calling Gemini once.")
@@ -91,25 +106,75 @@ def summarize_video_structured(chunks, llm, video_id):
         chunk.page_content
         for chunk in chunks
     )
+    
+    print("NUMBER OF CHUNKS:", len(chunks))
+    print("TRANSCRIPT LENGTH:", len(transcript_text))
+    print("LAST PART OF TRANSCRIPT:")
+    print(transcript_text[-1000:])
 
     prompt = f"""
-    You are an expert AI synthesizing an educational YouTube video transcript into a Hybrid Knowledge Breakdown.
-    
-    Generate a JSON object with:
-    1. "executive_summary": A concise 2-3 sentence overview explaining the core thesis and purpose of the video in 20-30 seconds.
-    2. "structured_summary": A list of 3-5 logical chronological sections. Each section must have:
-       - "id": integer (1, 2, 3...)
-       - "title": concise conceptual heading
-       - "explanation": clear factual explanation
-       - "key_points": array of 2-3 bullet point strings
-       - "start_timestamp": mm:ss string (e.g. "02:15")
-       - "end_timestamp": mm:ss string (e.g. "05:30")
-    
-    Output ONLY valid JSON.
-    
-    Transcript:
-    {transcript_text}
-    """
+You are an expert AI analyzing a YouTube video transcript.
+
+Your task is to create a structured chronological breakdown of the ENTIRE video.
+
+Return a JSON object with exactly these fields:
+
+{{
+  "executive_summary": "A concise 2-3 sentence overview of the entire video.",
+  "structured_summary": [
+    {{
+      "id": 1,
+      "title": "Section title",
+      "explanation": "Clear explanation of this part of the video.",
+      "key_points": [
+        "Important point 1",
+        "Important point 2",
+        "Important point 3"
+      ],
+      "start_timestamp": "MM:SS",
+      "end_timestamp": "MM:SS"
+    }}
+  ]
+}}
+
+IMPORTANT RULES:
+
+1. Create BETWEEN 8 AND 12 sections for a video longer than 40 minutes.
+2. Cover the ENTIRE transcript from the beginning to the final part.
+3. Do NOT combine large portions of the video into one section.
+4. Each section should represent a distinct chronological topic or discussion.
+5. The sections must be in chronological order.
+6. The first section must start near 00:00.
+7. The final section MUST cover the final portion of the transcript.
+8. Distribute timestamps across the FULL duration of the video.
+9. Do not stop at the middle of the transcript.
+10. Do not create only 4 or 5 large sections.
+11. Prefer smaller, meaningful sections rather than combining unrelated topics.
+12. Every section must contain:
+   - id
+   - title
+   - explanation
+   - key_points
+   - start_timestamp
+   - end_timestamp
+
+TIMESTAMP RULES:
+
+- Use timestamps that reflect the chronological position of the topic.
+- Timestamps must progressively move forward.
+- Do not repeatedly use 00:00.
+- Do not place most of the video content inside the final section.
+- The last section should end near the actual end of the video.
+
+OUTPUT ONLY VALID JSON.
+Do not include markdown.
+Do not include ```json.
+Do not include explanations outside the JSON.
+
+TRANSCRIPT:
+
+{transcript_text}
+"""
 
     try:
         response = llm.invoke(prompt)
